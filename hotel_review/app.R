@@ -11,92 +11,123 @@ library(shiny)
 library(shinydashboard)
 library(tidyverse)
 library(leaflet)
+library(plotly)
+library(DT)
 
 hoteldata <- read_csv("../data/hotelreview.csv")
 
 
 ## Sidebar content
-sidebar <- dashboardSidebar(
-  sidebarMenu(
-    menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
-    menuItem("Map", tabName = "map", icon = icon("globe"))
-  )
-)
+sidebar <- dashboardSidebar(sidebarMenu(
+  menuItem(
+    "Dashboard",
+    tabName = "dashboard",
+    icon = icon("dashboard")
+  ),
+  menuItem("Get Data", tabName = "table", icon = icon("list-alt")),
+  
+  menuItem("About", tabName = "about", icon = icon("globe"))
+))
 
 ## Body content
-body <- dashboardBody(
-  tabItems(
-    # First tab content
-    tabItem(tabName = "dashboard",
-            fluidRow(
-              box(plotOutput("plot1", height = 250)),
-              
-              box(
-                title = "Filter1",
-                sliderInput("slider1", "Radius distance to Nashville Software School:", 1, 100, 50)
-              ),
-              
-              box(
-                title = "Filter2",
-                sliderInput("slider2", "Nightly Advertised Price:", 50, 300, 150)
-              ),
-              
-              tableOutput("table")
+body <- dashboardBody(tabItems(
+  # First tab content
+  tabItem(tabName = "dashboard",
+          fluidRow(
+            column(width = 12,
+                   box(width = NULL, solidHeader = TRUE,leafletOutput("mymap"),
+                       actionButton("refresh", "Refresh Now"))
+            ),
+            
+            box(plotlyOutput("plot1")),
+            
+            
+            box(status = "warning",
+              title = "Filter1",
+              sliderInput(
+                "slider1",
+                "Radius distance to Nashville Software School:",
+                1,
+                30,
+                10
+              )
+            ),
+            
+            box(status = "warning",
+              title = "Filter2",
+              sliderInput("slider2", "Nightly Advertised Price:", 50, 300, 150)
             )
-    ),
-    
-    # Second tab content
-    tabItem(tabName = "map",
-            #h2("not yet sure how to insert a map"),
-            leafletOutput("mymap"),
-            p()
-            #actionButton("recalc", "New points")
+            
+           )
+          ),
+  
+  
+  # Second tab content
+  tabItem(
+    tabName = "table",
+    fluidRow(
+      column(
+        DT::dataTableOutput("table"), width = 6)
+    )
+  ),
+
+  
+  # Third tab content
+  tabItem(
+    tabName = "about",
+    h2(
+      "Hi there, Thanks for visiting our website. This is a free tool to help our users to find the most ideal hotel by researching hotel reviews. (This is a student practice project, and comes with no warranty.)"
     )
   )
-)
+  
+))
 
 ui <- dashboardPage(
-  skin="black",
-  dashboardHeader(title = "Basic dashboard"),
+  skin = "black",
+  dashboardHeader(title = "Nashville Hotels"),
   sidebar = sidebar,
   body = body
-
-  )
+)
 
 
 
 
 server <- function(input, output, session) {
-  
-  output$plot1 <- renderPlot({
-  hotel_data_w_filter<- hoteldata %>% 
+  #BCG Scatter plot
+  output$plot1 <- renderPlotly({
+    hotel_data_w_filter <- hoteldata %>%
       filter(radius_dist_to_nss < input$slider1) %>%
-      filter(nightly_advertised_price < input$slider2) 
-  hotel_data_w_filter %>% 
-      ggplot(aes(x=review_num,y=review_score)) + geom_point() 
-    
+      filter(nightly_advertised_price < input$slider2)
+    p <- hotel_data_w_filter %>%
+      ggplot(aes(x = review_num, y = review_score)) + geom_point() #+theme_classic()
+    ggplotly(p)
   })
   
-  output$table <- renderTable({
-    hoteldata %>% 
+  #Data Table
+  output$table = DT::renderDataTable({
+    hoteldata %>%
       filter(radius_dist_to_nss < input$slider1) %>%
-      filter(nightly_advertised_price < input$slider2) %>% 
+      filter(nightly_advertised_price < input$slider2) %>%
       print()
   })
   
   #Maps
   output$mymap <- renderLeaflet({
-    
-    hotel_data_w_filter<- hoteldata %>% 
+    hotel_data_w_filter <- hoteldata %>%
       filter(radius_dist_to_nss < input$slider1) %>%
-      filter(nightly_advertised_price < input$slider2) 
+      filter(nightly_advertised_price < input$slider2)
     
-    leaflet(data = hotel_data_w_filter) %>% 
+    leaflet(data = hotel_data_w_filter) %>%
       addTiles() %>%
-#      addProviderTiles(providers$Esri.NatGeoWorldMap) %>% 
-      addMarkers(~lng, ~lat, popup = ~as.character(hotelname), label = ~as.character(hotelname))
+      #      addProviderTiles(providers$Esri.NatGeoWorldMap) %>%
+      addMarkers(
+        ~ lng,
+        ~ lat,
+        popup = ~ as.character(link),
+        label = ~ as.character(hotelname)
+      )
   })
-    
+  
 }
 
 shinyApp(ui, server)
