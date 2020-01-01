@@ -26,7 +26,10 @@ sidebar <- dashboardSidebar(sidebarMenu(
   ),
   menuItem("Get Data", tabName = "table", icon = icon("list-alt")),
   
-  menuItem("About", tabName = "about", icon = icon("globe"))
+  menuItem("About", tabName = "about", icon = icon("globe")),
+  
+  sliderInput("slider1","Radius distance to Nashville Software School:",1,30,10),
+  sliderInput("slider2", "Nightly Advertised Price:", 50, 300, 150)
 ))
 
 ## Body content
@@ -34,32 +37,11 @@ body <- dashboardBody(tabItems(
   # First tab content
   tabItem(tabName = "dashboard",
           fluidRow(
-            column(width = 12,
-                   box(width = NULL, solidHeader = TRUE,leafletOutput("mymap"),
-                       actionButton("refresh", "Refresh Now"))
+                   box(width = NULL, solidHeader = TRUE,leafletOutput("mymap"),actionButton("refresh", "Refresh Now")),
+                   box(width = NULL,plotlyOutput("plot1"))
+                   
+                   )
             ),
-            
-            box(plotlyOutput("plot1")),
-            
-            
-            box(status = "warning",
-              title = "Filter1",
-              sliderInput(
-                "slider1",
-                "Radius distance to Nashville Software School:",
-                1,
-                30,
-                10
-              )
-            ),
-            
-            box(status = "warning",
-              title = "Filter2",
-              sliderInput("slider2", "Nightly Advertised Price:", 50, 300, 150)
-            )
-            
-           )
-          ),
   
   
   # Second tab content
@@ -121,11 +103,15 @@ server <- function(input, output, session) {
       addTiles() %>%
       #      addProviderTiles(providers$Esri.NatGeoWorldMap) %>%
       addMarkers(
-        ~ lng,
-        ~ lat,
-        popup = ~ as.character(link),
-        label = ~ as.character(hotelname)
-      )
+         ~ lng,
+         ~ lat,
+         popup = ~ as.character(link),
+         label = ~ as.character(hotelname)
+       )
+#     addCircleMarkers(lng =hotel_data_w_filter$lng, 
+#                      lat = hotel_data_w_filter$lat, 
+#                      radius = log(hotel_data_w_filter$nightly_advertised_price), 
+#                      label = hotel_data_w_filter$hotelname, weight = 10)
   })
   
 }
