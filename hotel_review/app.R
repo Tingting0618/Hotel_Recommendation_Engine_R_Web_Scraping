@@ -14,7 +14,7 @@ library(leaflet)
 library(plotly)
 library(DT)
 
-hoteldata <- read_csv("../data/hotelreview.csv")
+hoteldata <- read_csv("../data/hotelreview_clean.csv")
 
 
 ## Sidebar content
