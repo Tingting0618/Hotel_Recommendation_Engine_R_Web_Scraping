@@ -14,9 +14,12 @@ library(tidyverse)
 library(leaflet)
 library(plotly)
 library(DT)
+library(shinyjs)
+
+
 
 hoteldata <- read_csv("../data/hotelreview_clean.csv")
-hoteldata$link <- paste0("<a href='",hoteldata$link,"'>",hoteldata$link,"</a>")
+hoteldata$link <- paste0("<a href='",hoteldata$link, "'  target='_blank',>",'Book "',hoteldata$hotelname, '" at Booking.com',"</a>")
 hoteldata$radius_dist_to_nss<-round(hoteldata$radius_dist_to_nss, 1)
 hoteldata <- hoteldata %>% rename(Hotel_Name = hotelname,
                                   Review_Count = review_num,
@@ -24,7 +27,6 @@ hoteldata <- hoteldata %>% rename(Hotel_Name = hotelname,
                                   Radius_Dist_to_NSS=radius_dist_to_nss,
                                   Nightly_Price=nightly_advertised_price,
                                   Link = link)
-
 ## Sidebar content
 sidebar <- dashboardSidebar(sidebarMenu(
   menuItem(
@@ -45,8 +47,10 @@ body <- dashboardBody(tabItems(
   # First tab content
   tabItem(tabName = "dashboard",
           fluidRow(
-            box(width = NULL, solidHeader = TRUE,leafletOutput("mymap"),actionButton("refresh", "Refresh Now")),
-            box(width = NULL,plotlyOutput("plot1"), tags$head(tags$script(src="clickhandler.js")) )
+            box(width = NULL, solidHeader = TRUE,leafletOutput("mymap"), actionButton("reconnect", "Refresh Now")),
+            h4("Double-click to clear selection."),
+            box(width = NULL,plotlyOutput("plot1"), tags$head(tags$script(src="clickhandler.js"))
+                )
             
           )
   ),
@@ -77,7 +81,9 @@ body <- dashboardBody(tabItems(
         No private information is being used.
         Accuracy of the information compiled from the Booking.com site is not the responsibility of Hotel Search Now."),
     h3("About Author"),
-    p("Hotel Search Now was developed by Tingting Duan, with tremendous help from her instructor at",a(href='http://nashvillesoftwareschool.com/', target="_blank",'Nashville Software School'),"Michael Holloway, who is a mathematician and data scientist.")
+    p("Hotel Search Now was developed by Tingting Duan, with tremendous help from her instructor at",
+      a(href='http://nashvillesoftwareschool.com/', target="_blank",'Nashville Software School'),
+      "Michael Holloway, who is a brilliant mathematician and data scientist.")
 
   )
   
@@ -97,11 +103,16 @@ ui <- dashboardPage(
 server <- function(input, output, session) {
   #BCG Scatter plot
   output$plot1 <- renderPlotly({
+    
     hotel_data_w_filter <- hoteldata %>%
       filter(Radius_Dist_to_NSS < input$slider1) %>%
       filter(Nightly_Price < input$slider2)
+    
+    key <- row.names(hotel_data_w_filter)
+    
     p <- hotel_data_w_filter %>%
-     ggplot(aes(x = Review_Count, y = Review_Score,label = Hotel_Name)) + geom_point()#+theme_classic()
+     ggplot(aes(x = Review_Count, y = Review_Score,label = Hotel_Name, key = key)) + geom_point()
+    ggplotly(p) %>% layout(dragmode = "select")
     
   })
   
@@ -111,16 +122,21 @@ server <- function(input, output, session) {
       filter(Radius_Dist_to_NSS < input$slider1) %>%
       filter(Nightly_Price < input$slider2) %>%
       print()
-  }	,escape = FALSE
-)
+  }	,escape = FALSE)
   
   #Maps
   output$mymap <- renderLeaflet({
+    # Get subset based on selection
+
     hotel_data_w_filter <- hoteldata %>%
       filter(Radius_Dist_to_NSS < input$slider1) %>%
       filter(Nightly_Price < input$slider2)
     
-    leaflet(data = hotel_data_w_filter) %>%
+    if (!is.null(event_data("plotly_selected"))) {
+      hotel_data_w_filter<- hotel_data_w_filter[event_data("plotly_selected")$key,] }
+
+    
+    leaflet(data =hotel_data_w_filter) %>%
       addTiles() %>%
       #      addProviderTiles(providers$Esri.NatGeoWorldMap) %>%
       addMarkers(
@@ -129,10 +145,9 @@ server <- function(input, output, session) {
         popup = ~ as.character(Link),
         label = ~ as.character(Hotel_Name)
       )
-    #     addCircleMarkers(lng =hotel_data_w_filter$lng, 
-    #                      lat = hotel_data_w_filter$lat, 
-    #                      radius = log(hotel_data_w_filter$Nightly_Price), 
-    #                      label = hotel_data_w_filter$Hotel_Name, weight = 10)
+  })
+  
+  observeEvent(input$reconnect, {
   })
   
 }
