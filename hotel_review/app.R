@@ -36,7 +36,7 @@ sidebar <- dashboardSidebar(sidebarMenu(
   ),
   menuItem("See Results", tabName = "table", icon = icon("list-alt")),
   
-  menuItem("About", tabName = "about", icon = icon("globe")),
+  menuItem("About", tabName = "about", icon = icon("user-friends")),
   
   sliderInput("slider1","Radius distance to Nashville Software School:",1,30,10),
   sliderInput("slider2", "Nightly Advertised Price:", 50, 300, 150)
@@ -47,9 +47,26 @@ body <- dashboardBody(tabItems(
   # First tab content
   tabItem(tabName = "dashboard",
           fluidRow(
-            box(width = NULL, solidHeader = TRUE,leafletOutput("mymap"), actionButton("reconnect", "Refresh Now")),
+            box(width = NULL, solidHeader = TRUE,
+                actionButton(inputId='ab1', label="Project GitHub", icon = icon("github"), onclick ="window.open('https://github.com/Tingting0618/nss_midterm', '_blank')"),
+                actionButton(inputId='ab2', label="Learn Data Science", icon = icon("graduation-cap"), onclick ="window.open('http://nashvillesoftwareschool.com/programs/data-science', '_blank')"),
+                actionButton(inputId='ab3', label="Get More Hotel Data", icon = icon("bed"), onclick ="window.open('https://str.com')"),
+                
+                leafletOutput("mymap"),
+                actionButton(inputId='ab4', label="Refresh Now",  icon = icon("refresh"), onclick ="window.location.reload();")
+                
+               
+                ),
             h4("Double-click to clear selection."),
-            box(width = NULL,plotlyOutput("plot1"), tags$head(tags$script(src="clickhandler.js"))
+            box(width = NULL,plotlyOutput("plot1"), tags$head(tags$script(src="clickhandler.js")),
+            br(),
+            br(),
+            h4("You may search recommended hotel based on your own preference:"),
+            box(sliderInput("dist","Radius distance importance:",1,100,50),
+                sliderInput("price","Price importance:",1,100,50)),
+            box(sliderInput("score","Review score importance:",1,100,50),
+                sliderInput("count","Review count importance:",1,100,50))
+                
                 )
             
           )
@@ -106,12 +123,15 @@ server <- function(input, output, session) {
     
     hotel_data_w_filter <- hoteldata %>%
       filter(Radius_Dist_to_NSS < input$slider1) %>%
-      filter(Nightly_Price < input$slider2)
+      filter(Nightly_Price < input$slider2) %>%
+      mutate(Score= 30*percent_rank(Review_Count)+ 50*percent_rank(Review_Score)+20*percent_rank(1/(Radius_Dist_to_NSS)**2)+10*percent_rank(1/Nightly_Price)
+             ,Score= round(Score, 1))%>% 
+      mutate(Recommend = ifelse( Score> 80, "Recommended Hotel", "The Rest Hotels"))
     
     key <- row.names(hotel_data_w_filter)
     
     p <- hotel_data_w_filter %>%
-     ggplot(aes(x = Review_Count, y = Review_Score,label = Hotel_Name, key = key)) + geom_point()
+     ggplot(aes(x = Review_Count, y = Review_Score,label = Hotel_Name, key = key,color = Recommend)) + geom_point()
     ggplotly(p) %>% layout(dragmode = "select")
     
   })
@@ -121,6 +141,9 @@ server <- function(input, output, session) {
     hoteldata %>%
       filter(Radius_Dist_to_NSS < input$slider1) %>%
       filter(Nightly_Price < input$slider2) %>%
+      mutate(Score= 30*percent_rank(Review_Count)+ 50*percent_rank(Review_Score)+20*percent_rank(1/(Radius_Dist_to_NSS)**2)+10*percent_rank(1/Nightly_Price)
+             ,Score= round(Score, 1))%>% 
+      mutate(Recommend = ifelse( Score> 80, "YES", "NO"))%>% 
       print()
   }	,escape = FALSE)
   
@@ -147,8 +170,7 @@ server <- function(input, output, session) {
       )
   })
   
-  observeEvent(input$reconnect, {
-  })
+
   
 }
 
