@@ -15,6 +15,7 @@ library(leaflet)
 library(plotly)
 library(DT)
 library(shinyjs)
+library(png) 
 
 
 
@@ -35,7 +36,7 @@ sidebar <- dashboardSidebar(sidebarMenu(
     icon = icon("dashboard")
   ),
   menuItem("See Results", tabName = "table", icon = icon("list-alt")),
-  
+  menuItem("Scoring Algorithms", tabName = "scoring", icon = icon("square-root-alt")),
   menuItem("About", tabName = "about", icon = icon("user-friends")),
   
   sliderInput("slider1","Radius distance to Nashville Software School:",1,30,10),
@@ -62,10 +63,10 @@ body <- dashboardBody(tabItems(
             br(),
             br(),
             h4("You may search recommended hotel based on your own preference:"),
-            box(sliderInput("dist","Radius distance importance:",1,100,50),
-                sliderInput("price","Price importance:",1,100,50)),
-            box(sliderInput("score","Review score importance:",1,100,50),
-                sliderInput("count","Review count importance:",1,100,50))
+            box(sliderInput("dist","Radius distance importance:",1,100,20),
+                sliderInput("price","Price importance:",1,100,10)),
+            box(sliderInput("score","Review score importance:",1,100,45),
+                sliderInput("count","Review count importance:",1,100,25))
                 
                 )
             
@@ -82,8 +83,29 @@ body <- dashboardBody(tabItems(
     )
   ),
   
-  
   # Third tab content
+  tabItem( 
+    tabName = "scoring",
+    fluidPage(
+              box(width = NULL,plotlyOutput("plotdist"), tags$head(tags$script(src="clickhandler.js"))),
+              box(width = NULL,plotlyOutput("plotscore"),tags$head(tags$script(src="clickhandler.js"))),
+              box(width = NULL,plotlyOutput("plotprice"),tags$head(tags$script(src="clickhandler.js"))),
+              box(width = NULL,plotlyOutput("plotcount"),tags$head(tags$script(src="clickhandler.js"))),
+              imageOutput("image2"),
+              br(),
+              h3("R Code"),
+              p("Score = 100*(
+                (input$count/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Count)+ 
+                (input$score/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Score)+
+                (input$dist/(input$count+input$score+input$dist+input$price))*percent_rank(1/(Radius_Dist_to_NSS)**2)+
+                (input$price/(input$count+input$score+input$dist+input$price))*percent_rank(1/Nightly_Price) )
+                ")
+              )
+    ),
+      
+    
+    
+  # Fourth tab content
   tabItem( 
     tabName = "about",
     fluidPage( 
@@ -100,7 +122,18 @@ body <- dashboardBody(tabItems(
     h3("About Author"),
     p("Hotel Search Now was developed by Tingting Duan, with tremendous help from her instructor at",
       a(href='http://nashvillesoftwareschool.com/', target="_blank",'Nashville Software School'),
-      "Michael Holloway, who is a brilliant mathematician and data scientist.")
+      "Michael Holloway, who is a brilliant mathematician and data scientist."),
+    
+    h3("Future Research"),
+    p("Data will be:"),
+    p(icon("cocktail"),"Gathered from Booking.com,"),
+    p(icon("coffee"),"Dumped into PostgreSQL,"),
+    p(icon("beer"),"Read by R from PostgreSQL,"),
+    p(icon("flushed"),"Presented in R Shiny."),
+
+    h3("Feedback?"),
+      p("Please let us know if you have any thoughts, comments or suggestions on this project. You may contact the author via", 
+        a(href='tduan@str.com', target="_blank",'tduan@str.com'),".")
 
   )
   
@@ -124,9 +157,9 @@ server <- function(input, output, session) {
     hotel_data_w_filter <- hoteldata %>%
       filter(Radius_Dist_to_NSS < input$slider1) %>%
       filter(Nightly_Price < input$slider2) %>%
-      mutate(Score= 30*percent_rank(Review_Count)+ 50*percent_rank(Review_Score)+20*percent_rank(1/(Radius_Dist_to_NSS)**2)+10*percent_rank(1/Nightly_Price)
+      mutate(Score= 100*((input$count/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Count)+ (input$score/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Score)+(input$dist/(input$count+input$score+input$dist+input$price))*percent_rank(1/(Radius_Dist_to_NSS)**2)+(input$price/(input$count+input$score+input$dist+input$price))*percent_rank(1/Nightly_Price))
              ,Score= round(Score, 1))%>% 
-      mutate(Recommend = ifelse( Score> 80, "Recommended Hotel", "The Rest Hotels"))
+      mutate(Recommend = ifelse( rank(-Score)<4, "Recommended Hotel", "The Rest Hotels"))
     
     key <- row.names(hotel_data_w_filter)
     
@@ -136,12 +169,89 @@ server <- function(input, output, session) {
     
   })
   
+  #Dist Scatter
+  output$plotdist <- renderPlotly({
+    
+    hotel_data_w_filter <- hoteldata %>%
+      filter(Radius_Dist_to_NSS < input$slider1) %>%
+      filter(Nightly_Price < input$slider2) %>%
+      mutate(Score= 100*((input$count/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Count)+ (input$score/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Score)+(input$dist/(input$count+input$score+input$dist+input$price))*percent_rank(1/(Radius_Dist_to_NSS)**2)+(input$price/(input$count+input$score+input$dist+input$price))*percent_rank(1/Nightly_Price))
+             ,Score= round(Score, 1))%>% 
+      mutate(Recommend = ifelse( rank(-Score)<4, "Recommended Hotel", "The Rest Hotels"))
+    
+    key <- row.names(hotel_data_w_filter)
+    
+    p <- hotel_data_w_filter %>%
+      ggplot(aes(x = Radius_Dist_to_NSS, y =100* percent_rank(1/(Radius_Dist_to_NSS)**2),label = Hotel_Name, key = key,color = Recommend)) + geom_point()
+    ggplotly(p) %>% layout(dragmode = "select")
+    
+  })
+  
+  #score scatter
+  output$plotscore <- renderPlotly({
+    
+    hotel_data_w_filter <- hoteldata %>%
+      filter(Radius_Dist_to_NSS < input$slider1) %>%
+      filter(Nightly_Price < input$slider2) %>%
+      mutate(Score= 100*((input$count/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Count)+ (input$score/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Score)+(input$dist/(input$count+input$score+input$dist+input$price))*percent_rank(1/(Radius_Dist_to_NSS)**2)+(input$price/(input$count+input$score+input$dist+input$price))*percent_rank(1/Nightly_Price))
+             ,Score= round(Score, 1))%>% 
+      mutate(Recommend = ifelse( rank(-Score)<4, "Recommended Hotel", "The Rest Hotels"))
+    
+    key <- row.names(hotel_data_w_filter)
+    
+    p <- hotel_data_w_filter %>%
+      ggplot(aes(x = Review_Score, y =100* percent_rank(Review_Score),label = Hotel_Name, key = key,color = Recommend)) + geom_point()
+    ggplotly(p) %>% layout(dragmode = "select")
+    
+  })
+  
+  #count Scatter
+  output$plotcount <- renderPlotly({
+    
+    hotel_data_w_filter <- hoteldata %>%
+      filter(Radius_Dist_to_NSS < input$slider1) %>%
+      filter(Nightly_Price < input$slider2) %>%
+      mutate(Score= 100*((input$count/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Count)+ (input$score/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Score)+(input$dist/(input$count+input$score+input$dist+input$price))*percent_rank(1/(Radius_Dist_to_NSS)**2)+(input$price/(input$count+input$score+input$dist+input$price))*percent_rank(1/Nightly_Price))
+             ,Score= round(Score, 1))%>% 
+      mutate(Recommend = ifelse( rank(-Score)<4, "Recommended Hotel", "The Rest Hotels"))
+    
+    key <- row.names(hotel_data_w_filter)
+    
+    p <- hotel_data_w_filter %>%
+      ggplot(aes(x = Review_Count, y =100* percent_rank(Review_Count),label = Hotel_Name, key = key,color = Recommend)) + geom_point()
+    ggplotly(p) %>% layout(dragmode = "select")
+    
+  })
+  
+  #price Scatter
+  output$plotprice <- renderPlotly({
+    
+    hotel_data_w_filter <- hoteldata %>%
+      filter(Radius_Dist_to_NSS < input$slider1) %>%
+      filter(Nightly_Price < input$slider2) %>%
+      mutate(Score= 100*((input$count/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Count)+ (input$score/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Score)+(input$dist/(input$count+input$score+input$dist+input$price))*percent_rank(1/(Radius_Dist_to_NSS)**2)+(input$price/(input$count+input$score+input$dist+input$price))*percent_rank(1/Nightly_Price))
+             ,Score= round(Score, 1))%>% 
+      mutate(Recommend = ifelse( rank(-Score)<4, "Recommended Hotel", "The Rest Hotels"))
+    
+    key <- row.names(hotel_data_w_filter)
+    
+    p <- hotel_data_w_filter %>%
+      ggplot(aes(x = Nightly_Price, y =100* percent_rank(1/Nightly_Price),label = Hotel_Name, key = key,color = Recommend)) + geom_point()
+    ggplotly(p) %>% layout(dragmode = "select")
+    
+  })
+  
+  output$image2 <- renderImage({
+    list(src = "../image/equation.png",width=800,hight=400,
+        filetype = "image/png")},
+         deleteFile = FALSE)
+
   #Data Table
   output$table = DT::renderDataTable({
     hoteldata %>%
       filter(Radius_Dist_to_NSS < input$slider1) %>%
       filter(Nightly_Price < input$slider2) %>%
-      mutate(Score= 30*percent_rank(Review_Count)+ 50*percent_rank(Review_Score)+20*percent_rank(1/(Radius_Dist_to_NSS)**2)+10*percent_rank(1/Nightly_Price)
+      mutate(Score= 100*((input$count/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Count)+ (input$score/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Score)+(input$dist/(input$count+input$score+input$dist+input$price))*percent_rank(1/(Radius_Dist_to_NSS)**2)+(input$price/(input$count+input$score+input$dist+input$price))*percent_rank(1/Nightly_Price))
              ,Score= round(Score, 1))%>% 
       mutate(Recommend = ifelse( Score> 80, "YES", "NO"))%>% 
       print()
