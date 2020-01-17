@@ -35,8 +35,8 @@ sidebar <- dashboardSidebar(sidebarMenu(
     tabName = "dashboard",
     icon = icon("dashboard")
   ),
-  menuItem("See Results", tabName = "table", icon = icon("list-alt")),
   menuItem("Scoring Algorithms", tabName = "scoring", icon = icon("square-root-alt")),
+  menuItem("See Raw Data", tabName = "table", icon = icon("list-alt")),
   menuItem("About", tabName = "about", icon = icon("user-friends")),
   
   sliderInput("slider1","Radius distance to Nashville Software School:",1,30,10),
@@ -91,9 +91,8 @@ body <- dashboardBody(tabItems(
               box(width = NULL,plotlyOutput("plotscore"),tags$head(tags$script(src="clickhandler.js"))),
               box(width = NULL,plotlyOutput("plotprice"),tags$head(tags$script(src="clickhandler.js"))),
               box(width = NULL,plotlyOutput("plotcount"),tags$head(tags$script(src="clickhandler.js"))),
-              imageOutput("image2"),
-              br(),
-              h3("R Code"),
+              box(width = NULL,imageOutput("image2")),
+              h4("R Code"),
               p("Score = 100*(
                 (input$count/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Count)+ 
                 (input$score/(input$count+input$score+input$dist+input$price))*percent_rank(Review_Score)+
@@ -242,7 +241,7 @@ server <- function(input, output, session) {
   })
   
   output$image2 <- renderImage({
-    list(src = "../image/equation.png",width=800,hight=400,
+    list(src = "../image/equation_2.png",width=800,
         filetype = "image/png")},
          deleteFile = FALSE)
 
