@@ -15,7 +15,7 @@ For this project, we collected all Nashville hotel listings on Booking.com using
 ### Step 2: Building Recommendation Website Using R Shiny
 
 The recommendation engine is based on user's destination distance, price preference, and review score & counts combination. 
-https://hotelsearchnow-tingting.shinyapps.io/Hotel_Recommendation_Engine/
+https://hotelsearchnow-tingting.shinyapps.io/Hotel_Search_Now/
 
 ![Recommendation](https://user-images.githubusercontent.com/44503223/123189101-d330b400-d462-11eb-9c28-352e91216cd2.gif)
 
