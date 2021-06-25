@@ -132,7 +132,7 @@ body <- dashboardBody(tabItems(
 
     h3("Feedback?"),
       p("Please let us know if you have any thoughts, comments or suggestions on this project. You may contact the author via", 
-        a(href='tduan@str.com', target="_blank",'tduan@str.com'),".")
+        a(href='tingtingduanpy@gmail.com', target="_blank",'tingtingduanpy@gmail.com'),".")
 
   )
   
