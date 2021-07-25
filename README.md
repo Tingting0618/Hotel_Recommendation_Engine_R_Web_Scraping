@@ -30,4 +30,4 @@ Python (selenium, pandas), R Shiny, R (tidyverse, leaflet, plotly)
 
 ## Learn More
 
-You can learn more in the [Tingting Duan's Project Portfolio](https://tingting0618.github.io).
+For more information, please check out the [Project Portfolio](https://tingting0618.github.io).
