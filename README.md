@@ -26,8 +26,3 @@ Python (selenium, pandas), R Shiny, R (tidyverse, leaflet, plotly)
 
 ### Scoring details
 ![equation_2](https://user-images.githubusercontent.com/44503223/123188039-f65a6400-d460-11eb-85eb-4e0370e7039f.png)
-
-
-## Learn More
-
-For more information, please check out the [Project Portfolio](https://tingting0618.github.io).
